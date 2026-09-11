@@ -4,6 +4,7 @@ void main() {
   runApp(const KarleshwarApp());
 }
 
+// ---------------- MODELS ----------------
 class Customer {
   final String name;
   final String phone;
@@ -28,6 +29,55 @@ class TransactionRecord {
   });
 }
 
+class WorkerProfile {
+  final String id;
+  final String name;
+  final String role;
+  final String phone;
+  String workDone;
+  double salaryPaid;
+  double nextSalaryDue;
+  double expenseAdvance; // kharcha
+
+  WorkerProfile({
+    required this.id,
+    required this.name,
+    required this.role,
+    required this.phone,
+    this.workDone = "Cane cutting & loading",
+    this.salaryPaid = 0.0,
+    this.nextSalaryDue = 0.0,
+    this.expenseAdvance = 0.0,
+  });
+}
+
+class FarmerPurchase {
+  final String farmerName;
+  final String phone;
+  final String village;
+  final double quantity; // in tons or acres
+  final String unit; // 'Tons' or 'Acres'
+  final double ratePerUnit;
+  final double totalPayable;
+  final double paidAmount;
+  final double balanceDue;
+  final DateTime date;
+
+  FarmerPurchase({
+    required this.farmerName,
+    required this.phone,
+    required this.village,
+    required this.quantity,
+    required this.unit,
+    required this.ratePerUnit,
+    required this.totalPayable,
+    required this.paidAmount,
+    required this.balanceDue,
+    required this.date,
+  });
+}
+
+// ---------------- ROOT APP ----------------
 class KarleshwarApp extends StatelessWidget {
   const KarleshwarApp({super.key});
 
@@ -38,14 +88,20 @@ class KarleshwarApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        primarySwatch: Colors.green,
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+        primaryColor: const Color(0xFF1E5631),
+        scaffoldBackgroundColor: const Color(0xFFF4F6F8),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E5631),
+          foregroundColor: Colors.white,
+          elevation: 2,
+        ),
       ),
       home: const MainNavigationHolder(),
     );
   }
 }
 
+// ---------------- MAIN NAVIGATION ----------------
 class MainNavigationHolder extends StatefulWidget {
   const MainNavigationHolder({super.key});
 
@@ -58,22 +114,17 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
 
   final List<Customer> _customers = [];
   final List<TransactionRecord> _transactions = [];
+  final List<WorkerProfile> _workers = [];
+  final List<FarmerPurchase> _farmers = [];
 
   double rateCo86032 = 3200.0;
   double rateCo265 = 2950.0;
-  final String adminPin = "1234";
+  String adminPin = "1234";
 
-  void _addCustomer(Customer customer) {
-    setState(() {
-      _customers.add(customer);
-    });
-  }
-
-  void _addTransaction(TransactionRecord tx) {
-    setState(() {
-      _transactions.add(tx);
-    });
-  }
+  void _addCustomer(Customer customer) => setState(() => _customers.add(customer));
+  void _addTransaction(TransactionRecord tx) => setState(() => _transactions.add(tx));
+  void _addWorker(WorkerProfile w) => setState(() => _workers.add(w));
+  void _addFarmer(FarmerPurchase f) => setState(() => _farmers.add(f));
 
   void _updateRates(double r1, double r2) {
     setState(() {
@@ -82,27 +133,36 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
     });
   }
 
+  void _changePin(String newPin) {
+    setState(() {
+      adminPin = newPin;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
       HomeScreen(
-        customers: _customers,
-        transactions: _transactions,
-        rateCo86032: rateCo86032,
-        rateCo265: rateCo265,
         onNavigate: (index) => setState(() => _currentIndex = index),
+      ),
+      WorkersScreen(
+        workers: _workers,
+        onAddWorker: _addWorker,
+        onUpdateWorker: () => setState(() {}),
+      ),
+      FarmersScreen(
+        farmers: _farmers,
+        onAddFarmer: _addFarmer,
       ),
       RevenueScreen(transactions: _transactions),
       AddCustomerScreen(onCustomerAdded: _addCustomer),
-      UdhariScreen(
-        customers: _customers,
-        onTransactionAdded: _addTransaction,
-      ),
+      UdhariScreen(customers: _customers, onTransactionAdded: _addTransaction),
       LiveRateScreen(
         rateCo86032: rateCo86032,
         rateCo265: rateCo265,
         adminPin: adminPin,
         onRatesUpdated: _updateRates,
+        onPinChanged: _changePin,
       ),
     ];
 
@@ -110,20 +170,20 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
       appBar: AppBar(
         title: const Text(
           'KARLESHWAR SUGARCANE FEEDS',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        backgroundColor: const Color(0xFF1E5631),
-        elevation: 2,
       ),
       body: screens[_currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
-        indicatorColor: const Color(0xFFE8F5E9),
+        indicatorColor: const Color(0xFFC8E6C9),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home, color: Color(0xFF1E5631)), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.badge), label: 'Workers'),
+          NavigationDestination(icon: Icon(Icons.agriculture), label: 'Farmers'),
           NavigationDestination(icon: Icon(Icons.trending_up), label: 'Revenue'),
-          NavigationDestination(icon: Icon(Icons.person_add_alt_1), label: 'Customer'),
+          NavigationDestination(icon: Icon(Icons.person_add), label: 'Customer'),
           NavigationDestination(icon: Icon(Icons.menu_book), label: 'Udhari'),
           NavigationDestination(icon: Icon(Icons.price_change), label: 'Rates'),
         ],
@@ -132,123 +192,115 @@ class _MainNavigationHolderState extends State<MainNavigationHolder> {
   }
 }
 
-// 1. HOME SCREEN
+// ---------------- 1. HOME SCREEN ----------------
 class HomeScreen extends StatelessWidget {
-  final List<Customer> customers;
-  final List<TransactionRecord> transactions;
-  final double rateCo86032;
-  final double rateCo265;
   final Function(int) onNavigate;
-
-  const HomeScreen({
-    super.key,
-    required this.customers,
-    required this.transactions,
-    required this.rateCo86032,
-    required this.rateCo265,
-    required this.onNavigate,
-  });
+  const HomeScreen({super.key, required this.onNavigate});
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildActionCard(
-            title: 'REVENUE THIS WEEK',
-            subtitle: 'Tap to view weekly ledger and cash flow',
-            icon: Icons.payments,
-            backgroundColor: const Color(0xFF2E7D32),
-            textColor: Colors.white,
-            onTap: () => onNavigate(1),
-          ),
-          const SizedBox(height: 14),
-          _buildActionCard(
-            title: 'ADD CUSTOMER',
-            subtitle: 'Register new buyer & sugarcane tons',
-            icon: Icons.person_add,
-            backgroundColor: const Color(0xFFFFF9C4),
-            textColor: Colors.black87,
-            onTap: () => onNavigate(2),
-          ),
-          const SizedBox(height: 14),
-          _buildActionCard(
-            title: 'UDHARI REGISTER',
-            subtitle: 'Track advance, balance & outstanding dues',
-            icon: Icons.account_balance_wallet,
-            backgroundColor: const Color(0xFFD32F2F),
-            textColor: Colors.white,
-            onTap: () => onNavigate(3),
-          ),
-          const SizedBox(height: 14),
-          _buildActionCard(
-            title: "TODAY'S LIVE RATE",
-            subtitle: 'CO-86032 & CO-265 current prices',
-            icon: Icons.bolt,
-            backgroundColor: const Color(0xFF1976D2),
-            textColor: Colors.white,
-            onTap: () => onNavigate(4),
-          ),
-        ],
-      ),
+      children: [
+        _buildActionTile(
+          title: 'WORKERS DIRECTORY',
+          subtitle: 'Worker profiles, work log, salary & kharcha advances',
+          icon: Icons.badge,
+          color: const Color(0xFF00695C),
+          onTap: () => onNavigate(1),
+        ),
+        const SizedBox(height: 12),
+        _buildActionTile(
+          title: 'FARMERS CANE PURCHASE',
+          subtitle: 'Sugarcane bought, live rate per Ton/Acre & dues',
+          icon: Icons.agriculture,
+          color: const Color(0xFF558B2F),
+          onTap: () => onNavigate(2),
+        ),
+        const SizedBox(height: 12),
+        _buildActionTile(
+          title: 'REVENUE & CASH FLOW',
+          subtitle: 'Weekly collection & verified transactions',
+          icon: Icons.payments,
+          color: const Color(0xFF2E7D32),
+          onTap: () => onNavigate(3),
+        ),
+        const SizedBox(height: 12),
+        _buildActionTile(
+          title: 'ADD CUSTOMER',
+          subtitle: 'Register feed buyer & sugarcane tons',
+          icon: Icons.person_add,
+          color: const Color(0xFFE65100),
+          onTap: () => onNavigate(4),
+        ),
+        const SizedBox(height: 12),
+        _buildActionTile(
+          title: 'UDHARI (CREDIT) REGISTER',
+          subtitle: 'Track advances, balance & pending dues',
+          icon: Icons.account_balance_wallet,
+          color: const Color(0xFFC62828),
+          onTap: () => onNavigate(5),
+        ),
+        const SizedBox(height: 12),
+        _buildActionTile(
+          title: "TODAY'S LIVE RATE",
+          subtitle: 'CO-86032 & CO-265 rates + PIN controls',
+          icon: Icons.bolt,
+          color: const Color(0xFF1565C0),
+          onTap: () => onNavigate(6),
+        ),
+      ],
     );
   }
 
-  Widget _buildActionCard({
+  Widget _buildActionTile({
     required String title,
     required String subtitle,
     required IconData icon,
-    required Color backgroundColor,
-    required Color textColor,
+    required Color color,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
         decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(16),
+          color: color,
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: color.withOpacity(0.3),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             )
           ],
         ),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 26,
-              backgroundColor: textColor.withOpacity(0.15),
-              child: Icon(icon, color: textColor, size: 28),
+              radius: 24,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: Icon(icon, color: Colors.white, size: 26),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.85)),
+                    style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9)),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 16, color: textColor.withOpacity(0.7)),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white70),
           ],
         ),
       ),
@@ -256,7 +308,346 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// 2. REVENUE SCREEN
+// ---------------- 2. WORKERS SCREEN ----------------
+class WorkersScreen extends StatelessWidget {
+  final List<WorkerProfile> workers;
+  final Function(WorkerProfile) onAddWorker;
+  final VoidCallback onUpdateWorker;
+
+  const WorkersScreen({
+    super.key,
+    required this.workers,
+    required this.onAddWorker,
+    required this.onUpdateWorker,
+  });
+
+  void _openAddWorkerDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final roleCtrl = TextEditingController(text: 'Cane Harvester / Loader');
+    final phoneCtrl = TextEditingController();
+    final nextSalCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Worker Profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Worker Full Name', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: roleCtrl, decoration: const InputDecoration(labelText: 'Role / Job', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile Number', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: nextSalCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Next Base Salary (₹)', border: OutlineInputBorder())),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+          ElevatedButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isEmpty) return;
+              final w = WorkerProfile(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                name: nameCtrl.text.trim(),
+                role: roleCtrl.text.trim(),
+                phone: phoneCtrl.text.trim(),
+                nextSalaryDue: double.tryParse(nextSalCtrl.text) ?? 0.0,
+              );
+              onAddWorker(w);
+              Navigator.pop(ctx);
+            },
+            child: const Text('SAVE WORKER'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openWorkerDetails(BuildContext context, WorkerProfile worker) {
+    final workCtrl = TextEditingController(text: worker.workDone);
+    final paidCtrl = TextEditingController(text: worker.salaryPaid.toString());
+    final nextCtrl = TextEditingController(text: worker.nextSalaryDue.toString());
+    final expCtrl = TextEditingController(text: worker.expenseAdvance.toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${worker.name} Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Contact: ${worker.phone.isEmpty ? "N/A" : worker.phone} | ${worker.role}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              const Divider(height: 20),
+              TextField(controller: workCtrl, decoration: const InputDecoration(labelText: 'Work Performed Log', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: paidCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Salary Already Paid (₹)', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: nextCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Next Salary Payable (₹)', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: expCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Money Given for Kharcha/Expense (₹)', border: OutlineInputBorder())),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CLOSE')),
+          ElevatedButton(
+            onPressed: () {
+              worker.workDone = workCtrl.text.trim();
+              worker.salaryPaid = double.tryParse(paidCtrl.text) ?? worker.salaryPaid;
+              worker.nextSalaryDue = double.tryParse(nextCtrl.text) ?? worker.nextSalaryDue;
+              worker.expenseAdvance = double.tryParse(expCtrl.text) ?? worker.expenseAdvance;
+              onUpdateWorker();
+              Navigator.pop(ctx);
+            },
+            child: const Text('UPDATE PROFILE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: workers.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.badge_outlined, size: 64, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text('No workers added yet.', style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _openAddWorkerDialog(context),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Add First Worker'),
+                  )
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: workers.length,
+              itemBuilder: (ctx, i) {
+                final w = workers[i];
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(14),
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFF00695C),
+                      foregroundColor: Colors.white,
+                      child: Text(w.name.isNotEmpty ? w.name[0].toUpperCase() : 'W'),
+                    ),
+                    title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text('Work: ${w.workDone}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text('Paid: ₹${w.salaryPaid}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                            const SizedBox(width: 8),
+                            Text('Next: ₹${w.nextSalaryDue}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
+                            const SizedBox(width: 8),
+                            Text('Kharcha: ₹${w.expenseAdvance}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        )
+                      ],
+                    ),
+                    trailing: const Icon(Icons.edit, size: 20),
+                    onTap: () => _openWorkerDetails(context, w),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openAddWorkerDialog(context),
+        backgroundColor: const Color(0xFF00695C),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New Worker'),
+      ),
+    );
+  }
+}
+
+// ---------------- 3. FARMERS SCREEN ----------------
+class FarmersScreen extends StatelessWidget {
+  final List<FarmerPurchase> farmers;
+  final Function(FarmerPurchase) onAddFarmer;
+
+  const FarmersScreen({super.key, required this.farmers, required this.onAddFarmer});
+
+  void _openAddFarmerDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final villageCtrl = TextEditingController();
+    final qtyCtrl = TextEditingController();
+    final rateCtrl = TextEditingController();
+    final paidCtrl = TextEditingController();
+    String unit = 'Tons';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Record Farmer Cane Purchase'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Farmer Full Name', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile Number', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: villageCtrl, decoration: const InputDecoration(labelText: 'Village / Farm Location', border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity Brought', border: OutlineInputBorder())),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        value: unit,
+                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                        items: ['Tons', 'Acres'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                        onChanged: (val) => setStateDialog(() => unit = val!),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: rateCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Rate per $unit (₹)', border: const OutlineInputBorder())),
+                const SizedBox(height: 10),
+                TextField(controller: paidCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount Paid to Farmer (₹)', border: OutlineInputBorder())),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL')),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                final qty = double.tryParse(qtyCtrl.text) ?? 0.0;
+                final rate = double.tryParse(rateCtrl.text) ?? 0.0;
+                final paid = double.tryParse(paidCtrl.text) ?? 0.0;
+                final total = qty * rate;
+                final bal = total - paid;
+
+                onAddFarmer(FarmerPurchase(
+                  farmerName: nameCtrl.text.trim(),
+                  phone: phoneCtrl.text.trim(),
+                  village: villageCtrl.text.trim(),
+                  quantity: qty,
+                  unit: unit,
+                  ratePerUnit: rate,
+                  totalPayable: total,
+                  paidAmount: paid,
+                  balanceDue: bal,
+                  date: DateTime.now(),
+                ));
+                Navigator.pop(ctx);
+              },
+              child: const Text('SAVE RECORD'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: farmers.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.agriculture, size: 64, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  const Text('No farmer purchases logged.', style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _openAddFarmerDialog(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Farmer Cane Purchase'),
+                  )
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: farmers.length,
+              itemBuilder: (ctx, i) {
+                final f = farmers[i];
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(f.farmerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text('${f.quantity} ${f.unit}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E7D32))),
+                          ],
+                        ),
+                        Text('Village: ${f.village.isEmpty ? "Local" : f.village} | Phone: ${f.phone.isEmpty ? "N/A" : f.phone}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        const Divider(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Rate: ₹${f.ratePerUnit}/${f.unit}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                            Text('Total: ₹${f.totalPayable}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Paid: ₹${f.paidAmount}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                            Text('Balance Due: ₹${f.balanceDue}', style: TextStyle(color: f.balanceDue > 0 ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openAddFarmerDialog(context),
+        backgroundColor: const Color(0xFF558B2F),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Purchase'),
+      ),
+    );
+  }
+}
+
+// ---------------- 4. REVENUE SCREEN ----------------
 class RevenueScreen extends StatelessWidget {
   final List<TransactionRecord> transactions;
   const RevenueScreen({super.key, required this.transactions});
@@ -314,7 +705,7 @@ class RevenueScreen extends StatelessWidget {
   }
 }
 
-// 3. ADD CUSTOMER SCREEN
+// ---------------- 5. ADD CUSTOMER SCREEN ----------------
 class AddCustomerScreen extends StatefulWidget {
   final Function(Customer) onCustomerAdded;
   const AddCustomerScreen({super.key, required this.onCustomerAdded});
@@ -355,8 +746,8 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF9A825),
-              foregroundColor: Colors.black,
+              backgroundColor: const Color(0xFFE65100),
+              foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(50),
             ),
             onPressed: _save,
@@ -369,7 +760,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   }
 }
 
-// 4. UDHARI (CREDIT) SCREEN
+// ---------------- 6. UDHARI (CREDIT) SCREEN ----------------
 class UdhariScreen extends StatefulWidget {
   final List<Customer> customers;
   final Function(TransactionRecord) onTransactionAdded;
@@ -489,7 +880,7 @@ class _UdhariScreenState extends State<UdhariScreen> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, minimumSize: const Size.fromHeight(50)),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC62828), foregroundColor: Colors.white, minimumSize: const Size.fromHeight(50)),
             onPressed: _saveTransaction,
             child: const Text('SUBMIT ENTRY'),
           ),
@@ -499,12 +890,13 @@ class _UdhariScreenState extends State<UdhariScreen> {
   }
 }
 
-// 5. LIVE RATE SCREEN
+// ---------------- 7. LIVE RATE & ADMIN SETTINGS ----------------
 class LiveRateScreen extends StatelessWidget {
   final double rateCo86032;
   final double rateCo265;
   final String adminPin;
   final Function(double, double) onRatesUpdated;
+  final Function(String) onPinChanged;
 
   const LiveRateScreen({
     super.key,
@@ -512,6 +904,7 @@ class LiveRateScreen extends StatelessWidget {
     required this.rateCo265,
     required this.adminPin,
     required this.onRatesUpdated,
+    required this.onPinChanged,
   });
 
   void _showRateDialog(BuildContext context, String variety, double currentRate) {
@@ -519,18 +912,8 @@ class LiveRateScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('$variety Live Rate'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Current Market Price: ₹$currentRate / ton', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
-            const SizedBox(height: 10),
-            const Text('Rates update according to local harvesting & transport rates.'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CLOSE')),
-        ],
+        content: Text('Current Market Price: ₹$currentRate / ton', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue)),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CLOSE'))],
       ),
     );
   }
@@ -539,11 +922,12 @@ class LiveRateScreen extends StatelessWidget {
     final pinCtrl = TextEditingController();
     final r1Ctrl = TextEditingController(text: rateCo86032.toString());
     final r2Ctrl = TextEditingController(text: rateCo265.toString());
+    final newPinCtrl = TextEditingController();
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Owner Rate Edit'),
+        title: const Text('Owner Rate & PIN Edit'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -552,12 +936,19 @@ class LiveRateScreen extends StatelessWidget {
                 controller: pinCtrl,
                 obscureText: true,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Enter Owner Secret PIN (Default: 1234)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'Current Secret PIN', border: OutlineInputBorder()),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               TextField(controller: r1Ctrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CO-86032 Rate (₹)', border: OutlineInputBorder())),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               TextField(controller: r2Ctrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CO-265 Rate (₹)', border: OutlineInputBorder())),
+              const Divider(height: 24),
+              TextField(
+                controller: newPinCtrl,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'New Secret PIN (Optional)', border: OutlineInputBorder()),
+              ),
             ],
           ),
         ),
@@ -569,13 +960,18 @@ class LiveRateScreen extends StatelessWidget {
                 final r1 = double.tryParse(r1Ctrl.text) ?? rateCo86032;
                 final r2 = double.tryParse(r2Ctrl.text) ?? rateCo265;
                 onRatesUpdated(r1, r2);
+
+                if (newPinCtrl.text.trim().isNotEmpty) {
+                  onPinChanged(newPinCtrl.text.trim());
+                }
+
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rates updated successfully!')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings updated successfully!')));
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Incorrect PIN. Access denied.')));
               }
             },
-            child: const Text('UPDATE'),
+            child: const Text('SAVE CHANGES'),
           ),
         ],
       ),
@@ -591,7 +987,7 @@ class LiveRateScreen extends StatelessWidget {
           ListTile(
             tileColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            leading: const CircleAvatar(backgroundColor: Color(0xFF1976D2), child: Text('1', style: TextStyle(color: Colors.white))),
+            leading: const CircleAvatar(backgroundColor: Color(0xFF1565C0), child: Text('1', style: TextStyle(color: Colors.white))),
             title: const Text('CO - 86032', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             subtitle: const Text('Tap to view live rate'),
             trailing: const Icon(Icons.chevron_right),
@@ -601,7 +997,7 @@ class LiveRateScreen extends StatelessWidget {
           ListTile(
             tileColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            leading: const CircleAvatar(backgroundColor: Color(0xFF1976D2), child: Text('2', style: TextStyle(color: Colors.white))),
+            leading: const CircleAvatar(backgroundColor: Color(0xFF1565C0), child: Text('2', style: TextStyle(color: Colors.white))),
             title: const Text('CO - 265', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             subtitle: const Text('Tap to view live rate'),
             trailing: const Icon(Icons.chevron_right),
@@ -612,7 +1008,7 @@ class LiveRateScreen extends StatelessWidget {
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             onPressed: () => _openAdminEditor(context),
             icon: const Icon(Icons.lock_clock),
-            label: const Text('Owner Rate Edit (PIN Protected)'),
+            label: const Text('Owner Rate & PIN Edit (Protected)'),
           ),
         ],
       ),
