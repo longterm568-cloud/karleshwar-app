@@ -40,7 +40,6 @@ class StorageService {
   static const String baseUrl =
       "https://firestore.googleapis.com/v1/projects/$projectId/databases/(default)/documents";
 
-  // Local storage (100% Reliable Offline)
   static Future<List<Map<String, dynamic>>> getLocal(String key) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(key);
@@ -58,7 +57,6 @@ class StorageService {
     await prefs.setString(key, json.encode(list));
   }
 
-  // Cloud sync in background
   static void syncToCloud(String collection, Map<String, dynamic> data) async {
     try {
       Map<String, dynamic> fields = {};
@@ -74,7 +72,7 @@ class StorageService {
   }
 }
 
-// ---------------- BOTTOM NAVIGATION ----------------
+// ---------------- MAIN NAVIGATION ----------------
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -403,6 +401,36 @@ class _WorkersScreenState extends State<WorkersScreen> {
     );
   }
 
+  void _confirmDeleteWorker(int index) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('कामगार हटवायचा आहे का?'),
+        content: Text('${workers[index]['name']} यांचे नाव आणि सर्व नोंदी हटतील.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('रद्द करा')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              String wId = workers[index]['id'];
+              workers.removeAt(index);
+              await StorageService.saveLocal('workers_list', workers);
+
+              // remove his ledger records too
+              final allLedger = await StorageService.getLocal('worker_ledger');
+              allLedger.removeWhere((e) => e['workerId'] == wId);
+              await StorageService.saveLocal('worker_ledger', allLedger);
+
+              if (mounted) Navigator.pop(ctx);
+              loadWorkers();
+            },
+            child: const Text('हटवा (Delete)', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -429,7 +457,16 @@ class _WorkersScreenState extends State<WorkersScreen> {
                     ),
                     title: Text(w['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(w['mobile']?.isEmpty ?? true ? 'नंबर नाही' : w['mobile']),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _confirmDeleteWorker(i),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 16),
+                      ],
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -495,6 +532,7 @@ class _WorkerLedgerScreenState extends State<WorkerLedgerScreen> {
               if (amt > 0) {
                 final all = await StorageService.getLocal('worker_ledger');
                 final rec = {
+                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
                   'workerId': widget.worker['id'],
                   'type': isUchal ? 'uchal' : 'kaam',
                   'amount': amt,
@@ -513,6 +551,14 @@ class _WorkerLedgerScreenState extends State<WorkerLedgerScreen> {
         ],
       ),
     );
+  }
+
+  void _deleteRecord(int index) async {
+    final item = records[index];
+    final all = await StorageService.getLocal('worker_ledger');
+    all.removeWhere((e) => e['id'] == item['id'] || (e['workerId'] == item['workerId'] && e['date'] == item['date'] && e['amount'] == item['amount']));
+    await StorageService.saveLocal('worker_ledger', all);
+    loadLedger();
   }
 
   @override
@@ -591,13 +637,22 @@ class _WorkerLedgerScreenState extends State<WorkerLedgerScreen> {
                         title: Text(item['note']?.isEmpty ?? true ? (isUchal ? 'उचल' : 'काम') : item['note'],
                             style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text(item['date'] ?? ''),
-                        trailing: Text(
-                          '₹ ${item['amount']}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isUchal ? Colors.red.shade700 : Colors.green.shade700,
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '₹ ${item['amount']}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isUchal ? Colors.red.shade700 : Colors.green.shade700,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
+                              onPressed: () => _deleteRecord(i),
+                            )
+                          ],
                         ),
                       );
                     },
@@ -680,6 +735,35 @@ class _FarmersScreenState extends State<FarmersScreen> {
     );
   }
 
+  void _confirmDeleteFarmer(int index) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('शेतकरी खाते हटवायचे का?'),
+        content: Text('${farmers[index]['name']} यांचे नाव आणि सर्व पावत्या हटतील.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('रद्द करा')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              String fId = farmers[index]['id'];
+              farmers.removeAt(index);
+              await StorageService.saveLocal('farmers_list', farmers);
+
+              final allSales = await StorageService.getLocal('farmer_sales');
+              allSales.removeWhere((e) => e['farmerId'] == fId);
+              await StorageService.saveLocal('farmer_sales', allSales);
+
+              if (mounted) Navigator.pop(ctx);
+              loadFarmers();
+            },
+            child: const Text('हटवा (Delete)', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -706,7 +790,16 @@ class _FarmersScreenState extends State<FarmersScreen> {
                     ),
                     title: Text(f['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(f['mobile']?.isEmpty ?? true ? 'नंबर नाही' : f['mobile']),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _confirmDeleteFarmer(i),
+                        ),
+                        const Icon(Icons.arrow_forward_ios, size: 16),
+                      ],
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -780,6 +873,7 @@ class _FarmerLedgerScreenState extends State<FarmerLedgerScreen> {
 
                 final all = await StorageService.getLocal('farmer_sales');
                 final rec = {
+                  'id': DateTime.now().millisecondsSinceEpoch.toString(),
                   'farmerId': widget.farmer['id'],
                   'item': itemCtrl.text.trim(),
                   'total': total,
@@ -799,6 +893,14 @@ class _FarmerLedgerScreenState extends State<FarmerLedgerScreen> {
         ],
       ),
     );
+  }
+
+  void _deleteSale(int index) async {
+    final item = sales[index];
+    final all = await StorageService.getLocal('farmer_sales');
+    all.removeWhere((e) => e['id'] == item['id'] || (e['farmerId'] == item['farmerId'] && e['date'] == item['date'] && e['total'] == item['total']));
+    await StorageService.saveLocal('farmer_sales', all);
+    loadSales();
   }
 
   @override
@@ -854,10 +956,18 @@ class _FarmerLedgerScreenState extends State<FarmerLedgerScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(item['item'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  Text(item['date'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                  Row(
+                                    children: [
+                                      Text(item['date'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                        onPressed: () => _deleteSale(i),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 4),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
